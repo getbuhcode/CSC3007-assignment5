@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.css" />
+  <style>
+    #map {
+        width: 1000px;
+        height: 600px;
+    }
+  </style>  
+</head>
+<body>
+  <center>
+    <h1>Singapore 24hr PSI Reading</h1>
+  </center>
+  
+  <div id="map"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.js"></script>
+
+  <script>
+    fetch('https://api.data.gov.sg/v1/environment/psi')
+                .then(function (response) {
+                    console.log(response);
+                    return response.json();
+                })
+                .then(function (data) {
+                    console.log(data.items[0].readings.psi_twenty_four_hourly);
+                    console.log(data.region_metadata);
+
+                    let psi_24 = data.items[0].readings.psi_twenty_four_hourly;
+                    let regionCoordinates = data.region_metadata;
+
+                    let tiles = new L.tileLayer('https://maps-{s}.onemap.sg/v3/Default/{z}/{x}/{y}.png', {
+                        detectRetina: true,
+                        maxZoom: 18,
+                        minZoom: 11,
+                        //Do not remove this attribution
+                        attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;">' +
+                                    'New OneMap | Map data © contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+                        });
+
+                    let map = new L.Map("map", {
+                    center: [1.347833, 103.809357], 
+                    zoom: 11,
+                    maxBounds: L.latLngBounds(L.latLng(1.1, 103.5), L.latLng(1.5, 104.3))
+                    })
+                    .addLayer(tiles);
+
+                    
+                    // add circle for each region
+                    for (let i = 0; i < regionCoordinates.length; i++){
+                        console.log(regionCoordinates[i].label_location.latitude);
+                        console.log(regionCoordinates[i].label_location.longitude);
+                        console.log(regionCoordinates[i].name);
+                        
+                        var region = regionCoordinates[i].name;
+                        var psiValue = psi_24[region];
+
+                        console.log(psiValue);
+                        console.log(getCircleColor(psiValue));
+                        var circle = L.circle([regionCoordinates[i].label_location.latitude, regionCoordinates[i].label_location.longitude], {
+                        color: getCircleColor(psiValue),
+                        fillColor: getCircleColor(psiValue),
+                        fillOpacity: 0.5,
+                        radius: 800,
+                        text: "hello",
+                        }).addTo(map);    
+
+                        var marker = L.marker([regionCoordinates[i].label_location.latitude, regionCoordinates[i].label_location.longitude], {
+                            icon: L.divIcon({
+                            className: 'my-icon',
+                            html: psiValue,
+                            }),   
+                        }).addTo(map);
+                    }
+                    
+                    function getCircleColor(psiValue){
+                        var circleColor = ''
+                        if (psiValue <= 50) {
+                            circleColor = '#90ee90' // light green
+                        }else if (psiValue > 50  && psiValue <= 100) {
+                            circleColor = '#006400' // dark green
+                        } else if (psiValue > 100 && psiValue <= 200) {
+                            circleColor = '#FFFF00' // yellow
+                        } else if (psiValue > 200 && psiValue <= 300) {
+                            circleColor = '#FFA500' // orange
+                        } else if (psiValue > 300 ){
+                            circleColor = '#FF0000' // red
+                        }
+                        return circleColor
+                    }
+                })
+                .catch(function (err) {
+                    console.log(err);
+                });
+  </script>
+    
+</body>
+</html>
